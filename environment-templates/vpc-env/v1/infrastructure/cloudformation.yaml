@@ -49,9 +49,9 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+      NatGatewayId: !Ref PublicSubnet1NATGateway
     DependsOn:
-      - GatewayAttachement
+      - PublicSubnet1NATGateway
   PublicSubnet1EIP:
     Type: 'AWS::EC2::EIP'
     Properties:
@@ -87,9 +87,9 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+      NatGatewayId: !Ref PublicSubnet1NATGateway
     DependsOn:
-      - GatewayAttachement
+      - PublicSubnet1NATGateway
   PublicSubnet2EIP:
     Type: 'AWS::EC2::EIP'
     Properties:
@@ -151,58 +151,7 @@ Resources:
       RouteTableId: !Ref PrivateSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref PublicSubnet2NATGateway
-  InternetGateway:
-    Type: 'AWS::EC2::InternetGateway'
-  GatewayAttachement:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
-    Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
-  pingSNSTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub '${AWS::StackName}-ping'
-      KmsMasterKeyId: 'alias/aws/sns'
-  pingSNSTopicPolicy:
-    Type: AWS::SNS::TopicPolicy
-    DependsOn: pingSNSTopic
-    Properties:
-      Topics:
-        - !Ref pingSNSTopic
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
-            Action:
-              - sns:Subscribe
-            Resource: !Ref pingSNSTopic
-            Condition:
-              StringEquals:
-                "sns:Protocol": "sqs"
-  SNSVPCEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties: 
-      PrivateDnsEnabled: Yes
-      SecurityGroupIds: 
-        - !GetAtt VPC.DefaultSecurityGroup
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sns'
-      SubnetIds: 
-        - !Ref 'PublicSubnet1'
-        - !Ref 'PublicSubnet2'
-      VpcEndpointType: Interface
-      VpcId: !Ref VPC
 Outputs:
-  SNSTopicArn:
-    Description: The name of the SNS Topic
-    Value: !Ref 'pingSNSTopic'
-  SNSTopicName:
-    Description: TopicName of the SNS Topic
-    Value: !GetAtt pingSNSTopic.TopicName
-  SNSRegion:
-    Description: Region of the SNS Topic
-    Value: !Ref 'AWS::Region'
   VPC:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
